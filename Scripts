@@ -1,3 +1,30 @@
-Explorations in Network Security and Forensics: Sumo Logic
+Explorations in Network Security and Forensics: Custom Scripts in Sumo Logic
 
-1: Web Application Detection Building with Sumo Logic
+# Script #1: SSRF Detection
+_sourceCategory = Labs/Networks/Logs
+| timeslice 30m
+| parse “publickey for * from * port *ssh2” as user, ip, port
+| count by _timeslice, user, ip, port
+| where _count > 15
+| sort by _count
+
+# Script #2: Brute Force Attack Logins 
+_sourceCategory=Labs/Windows/OS/Windows
+| parse "Message = \"*." as message
+| parse "ComputerName = \"*\";" as computer | where eventid = "4740"
+| count by computer, message, eventid
+
+# Script #3: MitM Attack Detection
+_sourceCategory=Labs/Apache/Access
+| lookup latitude, longitude, country_name, region, city from geo://location on ip = src_ip
+| lookup asn, organization from asn://default on ip=src_ip
+| where (url matches "*http://*127.0.0.1*" OR url matches "*http://*localhost*")
+| count by src_ip, country_name, organization, user_agent, uri
+| sort by _count
+
+#Script #4: Cloud Security DDoS Detection 
+_sourceCategory = AWS/CloudWatch/Logs
+| json auto
+| timeslice 1m
+| where action = ‘REJECT’ and direction = ‘INBOUND’ and bytes > 100000000
+| count by _timeslice, sourceAddress, _sourceHost, _sourceName
